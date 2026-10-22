@@ -29,7 +29,7 @@ jobs:
           gradle-version: '8.13'
 
       - name: Prepare Android project
-        shell: mv build.gradle.kts app/build.gradle.ktssed -i '/buildFeatures { compose = true }/i\    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }\n    kotlinOptions { jvmTarget = "17" }' app/build.gradle.kts
+        shell: bash
         run: |
           set -e
           mkdir -p app/src/main/java/com/example/tahakkum
@@ -42,6 +42,21 @@ jobs:
           if [ -f build.gradle.kts ]; then
             mv build.gradle.kts app/build.gradle.kts
           fi
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/build.gradle.kts")
+          s = p.read_text()
+          if "sourceCompatibility = JavaVersion.VERSION_17" not in s:
+              block = '''    compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions { jvmTarget = "17" }
+
+          '''
+              s = s.replace("    buildFeatures { compose = true }", block + "    buildFeatures { compose = true }")
+              p.write_text(s)
+          PY
           cat > build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "8.9.2" apply false
@@ -59,4 +74,3 @@ jobs:
           name: tahakkum-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
